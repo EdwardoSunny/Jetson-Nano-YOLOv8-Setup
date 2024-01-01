@@ -105,10 +105,10 @@ Now since you have both Python 3.6 and 3.8, you need to edit your ~.bashrc~ to m
 
 Edit your ~.bashrc~ by typing ~vi ~/.bashrc~
 add the following to the end of the file:
-- ~alias python="python3.8" ~
-- ~alias python3="python3.8" ~
-- ~alias pip="python3.8 -m pip" ~
-- ~alias pip3="python3.8 -m pip" ~
+- =alias python="python3.8"=
+- =alias python3="python3.8"=
+- =alias pip="python3.8 -m pip"=
+- =alias pip3="python3.8 -m pip"=
 ~:wq~ to write and quit and close the current terminal
 
 Now you have Python 3.8 installed and you will always run Python 3.8 when you use any python commands
@@ -116,7 +116,7 @@ Now you have Python 3.8 installed and you will always run Python 3.8 when you us
 ** Create Python 3.8 venv and keep it always active
 Make sure you are in root folder
 
-Create venv using ~python -m venv "vision"~
+Create venv using =python -m venv "vision"=
 
 Now edit your ~.bashrc~ again, same steps as before but now add the following line to the end of the file:
 - ~source ~/vision/bin/activate~
@@ -150,7 +150,7 @@ To check if everything worked correctly, ensure the torch package recognizes the
 
 ** Verify Installation
 Run YOLOv8 inference by:
-- ~yolo predict model=yolov8n.pt source='https://ultralytics.com/images/bus.jpg' ~
+- =yolo predict model=yolov8n.pt source='https://ultralytics.com/images/bus.jpg'=
 
 * Credits
 - The USB drive boot files from [[https://github.com/jetsonhacks/bootFromUSB][Jetson Hacks]]
