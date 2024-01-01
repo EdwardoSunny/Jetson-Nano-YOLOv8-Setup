@@ -1,0 +1,158 @@
+* Basic Set up
+** Installing Jetpack
+*** Install the SDK Manager ~.deb~ file first on a host machine (Ubuntu 18.04) through [[https://developer.nvidia.com/embedded/jetpack][Nvidia SDK Manager Install]]
+1. Make sure your host machine is Ubuntu 18.04, Jetpack ~sdkmanager~` will decide Jetpack version based on the board it detects and the host machine's version
+2. after the file is installed, run ~sudo dpkg -i your-sdk-manager-name.deb~
+3. now you can run it using ~sdkmanager~
+
+*** Set up the Jetson board for flashing
+**** connect 5V power through barrel jack, USB cable to host laptop with Ubuntu 18.04, HDMI/Display port to a monitor, some mouse/keyboard to USB, ethernet
+The ports should look something like this:
+#+ATTR_HTML: :width 200px
+[[images/ports.jpg]]
+
+on the back of the Jetson, connect a jumper between ~GND~ and ~FC REC~
+The ~FC REC~ and ~GND~ jumper on the back of the jetson under the heat sink should look like this:
+#+ATTR_HTML: :width 200px
+[[images/pins.jpg]]
+
+
+*** Flashing the Jetson
+type ~sdkmanager~ in terminal to run
+
+**** unselect Deepstream for now (eMMC jetson only has 16 GB storage, cannot install anything other than the OS for now) and ensure the Jetpack version is ~4.6.4~
+The selection screen initially should look like this:
+#+ATTR_HTML: :width 200px
+[[images/install.png]]
+click continue
+
+**** unselect all software other than the OS
+The selection screen for software should look like this:
+#+ATTR_HTML: :width 200px
+[[images/software.png]]
+click continue, set the username/password, and start the install (takes around 30 minutes)
+
+Now remove the jumper across ~GND~ and ~FC REC~ otherwise Jetson will not boot since it still thinks it's in flashing mode
+
+** Expanding Jetson Storage using USB Drive
+Jetson nano (eMMC version especially) only comes with 16 GB of storage. Cannot do anything as this is without any packages or models installed. Thus, need to expand storage.
+**** Take any USB stick with a large storage capacity (preferable reliable/not cheap so your files don't die and also metal since they do run hot)
+**** Plug in the USB stick into the Jetson on a free port
+**** Boot up the Jetson and log in
+**** Open gnome ~disks~ to format the USB drive
+format to ~GPT~ and wipe all memory on the drive as well (this will take a while)
+using gnome ~disks~ looks something like this:
+#+ATTR_HTML: :width 200px
+[[images/format.png]]
+
+After formatting, make sure the partitioning is ~GUID Paritioning Table~ (gnome ~disks~ shows this by default)
+
+*** Create a partition
+- Create a partition (click "+" in gnome ~disks~) and allocate 10 GB less than the max size of the drive
+  - we will use the extra space for a swapfile later
+- name the volume whatever you want
+- partition type should be ~Ext4~
+using gnome ~disks~, the partition creation should look like this:
+#+ATTR_HTML: :width 200px
+[[images/part.png]]
+
+the final partitions should look like this (extra space for swapfile later):
+#+ATTR_HTML: :width 200px
+[[images/final_part.png]]
+
+From now all everything is ran on the Jetson unless otherwise specified. Clone this repo on the Jetson so you have access to the files
+
+**** Open a terminal and type ~ls /dev/sd*~ to get what the name of the USB drive is to the Jetson (e.g. mine is /dev/sda1)
+**** ~cd /boot/extlinux~
+
+*** Change where the Jetson boots from by editing ~extlinux.conf~
+make a backup first incase something goes wrong by ~sudo cp extlinux.conf extlinux.conf.original~
+
+edit ~extlinux.conf~ by typing ~vi extlinux.conf~ and first copy the ~LABEL~ block and create another called sdcard or eMMC as a backup boot. (you should now have primary and eMMc/sdcard. It will boot from primary by default, which will be your USB drive)
+#+ATTR_HTML: :width 200px
+[[images/ext.png]]
+
+~chmod +x partUUID.sh~ and then run ~./partUUID.sh~ in a different terminal and copy and paste the ~root=xxxx-xxxx-xxxx~ string and replace the ~root=/dev/mmcblk0p1~ for ~LABEL primary~
+#+ATTR_HTML: :width 200px
+[[images/ext.png]]
+Now your default boot is from your USB drive and backup boot is from eMMC
+
+*** Copy the ~root~ and all Jetson files to USB drive to boot from it
+Open up the file browser to "mount" the usb drive
+
+Now just copy the ~root~ and all your files to the USB drive by running ~chmod +x copyRootToUSB.sh~ and then run ~./copyRootToUSB.sh -p /dev/sda1~ (note: /dev/sda1 was found from earlier by running ~ls /dev/sd*~ to find the name of the USB drive folder)
+- this might take a while
+
+After the files are done copying over, restart and it should boot from the USB drive
+
+* Environment Set up
+Now we will install Jetpack SDKs, install Python 3.8, YOLO, and Pytorch
+** Install Jetpack SDKs
+Remember earlier how we skipped installing Deepstream and Jetpack SDKs because we didn't have enough storage? Now go back to host computer with Ubuntu 18.04 that you installed ~sdkmanager~ on. Start ~sdkmanager~:
+- connect Jetson via USB
+- select Deepstream, click continue, and select all the SDKs (BUT ENSURE YOU UNSELECT THE OS IMAGE, OTHERWISE WILL FLASH AGAIN AND YOU WILL HAVE TO REPEAT EVERYTHING)
+- click install and let it run
+
+Now you will have CUDA 10.2, Deepstream, TensorRT, and related Nvidia software
+
+** Install Python 3.8
+Jetpack ~4.6.4~ is based on Ubuntu 18.04, which means it comes only with Python 3.6. This is bad because YOLOv8 requires >= Python 3.8.
+
+Luckily, the ~apt~ repo has Python 3.8, install everything with a simple oneliner:
+~sudo apt-get install python3.8 python3.8-dev python3.8-distutils python3.8-venv~
+
+Now since you have both Python 3.6 and 3.8, you need to edit your ~.bashrc~ to make sure you are running the right Python version. If you don't do this, you will install everything on Python 3.6 and it will all break...
+
+Edit your ~.bashrc~ by typing ~vi ~/.bashrc~
+add the following to the end of the file:
+- ~alias python="python3.8"~
+- ~alias python3="python3.8"~
+- ~alias pip="python3.8 -m pip"~
+- ~alias pip3="python3.8 -m pip"~
+~:wq~ to write and quit and close the current terminal
+
+Now you have Python 3.8 installed and you will always run Python 3.8 when you use any python commands
+
+** Create Python 3.8 venv and keep it always active
+Make sure you are in root folder
+
+Create venv using ~python -m venv "vision"~
+
+Now edit your ~.bashrc~ again, same steps as before but now add the following line to the end of the file:
+- ~source ~/vision/bin/activate~
+~:wq:
+
+Now for every terminal you start, you will always be in the ~vision~ venv you created with Python 3.8. Venv is nice because if you mess up, you can still restart without bricking your all Python on your computer
+
+** Install YOLOv8
+~pip install ultralytics==8.0.231~
+- this is the current newest version, but for future, this documentation worked with this version of ultralytics and pytorch
+- FYI, as of now, ultralytics works with >= Python 3.8 and >= torch 1.8
+
+if any dependency errors come up from install (e.g. missing packages) just ~pip install <missing package>~ and rerun ~pip install ultralytics==8.0.231~
+- this might change in future
+
+** Uninstall default Pytorch and Torchvision
+Default pip ultralytics install comes with torch 2.1.x and the corresponding torchvision --> this is wayyy too new and is not for ~aarch64~ architecture on the nano
+
+Therefore, uninstall both by running:
+- ~pip uninstall torch~
+- ~pip uninstall torchvision~
+
+** Install correct versions of Torch and Torch vision
+In this [[https://drive.google.com/drive/folders/1ARyfy36aLXGFdqdkbkDuEDVeDBnqKw85?usp=sharing][Torch Folder]], you can find the ~aarch64~ Python 3.8 compiled torch 1.11.0 and the matching torchvision 0.12.0 wheels specifically for the Jetson nano. Download them and install them via ~pip~:
+- ~python -m pip install torch-*.whl torchvision-*.whl~
+
+To check if everything worked correctly, ensure the torch package recognizes the cuda GPU on the Jetson by:
+- enter a python shell using ~python~
+- ~import torch~
+- type ~torch.cuda.device_count()~, if this returns ~1~, it means everything went correctly
+
+** Verify Installation
+Run YOLOv8 inference by:
+- ~yolo predict model=yolov8n.pt source='https://ultralytics.com/images/bus.jpg'~
+
+* Credits
+- The USB drive boot files from [[https://github.com/jetsonhacks/bootFromUSB][Jetson Hacks]]
+- The partition and copy instructions were from the [[https://www.youtube.com/watch?v=53rRMr1IpWs&t=567s][Jetson Hacks Video]] but slightly modified
+- The wheel files for Torch and Torchvision were from [[https://i7y.org/en/yolov8-on-jetson-nano/][this japanese blog]]
