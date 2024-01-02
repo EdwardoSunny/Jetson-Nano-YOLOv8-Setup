@@ -152,6 +152,15 @@ To check if everything worked correctly, ensure the torch package recognizes the
 Run YOLOv8 inference by:
 - yolo predict model=yolov8n.pt source='https://ultralytics.com/images/bus.jpg'
 
+** ONNX GPU Runtime Install
+Default ONNX is for Python 3.6 on Jetpack 4.6. To install for Python 3.8, ensure your venv is activated.
+
+Then download the ONNX ~1.11~ wheel for Python 3.8 [[https://drive.google.com/drive/folders/11fahXR11abvIcIBe5bmAdHOn8eoo1ahz?usp=sharing][here]]
+
+Install the wheel using ~pip install onnxruntime_gpu-1.11.0-cp38-cp38-linux_aarch64.whl~
+
+Now your ONNX export models should run fine through YOLOv8. Note ONNX alone doesn't do that much to speed up inference (around 2 or 3 FPS increase on 600x600)
+
 * Credits
 - The USB drive boot files from [[https://github.com/jetsonhacks/bootFromUSB][Jetson Hacks]]
 - The partition and copy instructions were from the [[https://www.youtube.com/watch?v=53rRMr1IpWs&t=567s][Jetson Hacks Video]] but slightly modified
